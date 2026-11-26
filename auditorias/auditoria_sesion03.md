@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Manipulación de archivos y llamadas OS  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue controlar la apertura y cierre de archivos, detectar rutas inexistentes y contar correctamente las líneas cuando el archivo no contiene un salto de línea al final.
 > 
 
 ---
@@ -27,14 +28,94 @@
 
 ### 2.2 Prompt Estructurado
 ```text
-[Pega aquí el prompt formal que redactaste para la IA]
+Contexto:
+Estoy desarrollando una práctica en lenguaje C
+utilizando GCC y Google Colab.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa las funciones escribir_texto()
+y contar_lineas() respetando las firmas
+del archivo api_sesion03.h.
+
+Utiliza fopen, fputs, fgetc y fclose.
+Controla archivos vacíos, rutas inexistentes
+y archivos sin salto de línea final.
+
+Devuelve -1 cuando ocurra un error y 0 cuando
+la escritura sea exitosa.
+
+Salida:
+Entrega únicamente código modular en C y
+su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
 ```
 
 ---
 
 ## 3. Código Devuelto por el Modelo
 ```c
-// Código devuelto por el LLM
+#include "api_sesion03.h"
+#include <stdio.h>
+
+int escribir_texto(const char *ruta, const char *texto) {
+    FILE *archivo = fopen(ruta, "w");
+
+    if (archivo == NULL) {
+        return -1;
+    }
+
+    if (fputs(texto, archivo) == EOF) {
+        fclose(archivo);
+        return -1;
+    }
+
+    if (fclose(archivo) == EOF) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int contar_lineas(const char *ruta) {
+    FILE *archivo = fopen(ruta, "r");
+
+    if (archivo == NULL) {
+        return -1;
+    }
+
+    int lineas = 0;
+    int c;
+    int anterior = '\n';
+
+    while ((c = fgetc(archivo)) != EOF) {
+        if (c == '\n') {
+            lineas++;
+        }
+
+        anterior = c;
+    }
+
+    if (ferror(archivo)) {
+        fclose(archivo);
+        return -1;
+    }
+
+    if (anterior != '\n') {
+        lineas++;
+    }
+
+    if (fclose(archivo) != 0) {
+        return -1;
+    }
+
+    return lineas;
+}
 ```
 
 ---
@@ -44,8 +125,17 @@
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 03 - Archivos: escribir y contar lineas ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] escribir_texto(...)==0             esperado: 0            obtenido: 0            OK
+[ 2] contar_lineas(3 lineas)            esperado: 3            obtenido: 3            OK
+[ 3] contar_lineas(sin salto final)     esperado: 2            obtenido: 2            OK
+[ 4] contar_lineas(archivo vacio)       esperado: 0            obtenido: 0            OK
+[ 5] contar_lineas(inexistente)         esperado: -1           obtenido: -1           OK
+[ 6] escribir_texto(ruta invalida)      esperado: -1           obtenido: -1           OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion03.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
