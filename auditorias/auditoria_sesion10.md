@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Integración AST y Tipado Estático  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue respetar la precedencia de los operadores, controlar los paréntesis mediante funciones recursivas y detectar errores de sintaxis y divisiones entre cero sin interrumpir inesperadamente el programa.
 > 
 
 ---
@@ -26,159 +27,186 @@
 | **Output (O)** | Solo código modular y análisis de complejidad |
 
 ### 2.2 Prompt Estructurado
-Actúa como un especialista en compiladores. Desarrolla
-el mini-evaluador de la sesión 10 respetando las firmas
-de api_sesion10.h. Evalúa correctamente las expresiones,
-controla los errores y respeta la precedencia de las
-operaciones. Genera código compatible con el harness.
+```text
+Contexto:
+Estoy desarrollando un mini-evaluador de
+expresiones aritméticas en C utilizando GCC.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa la función evaluar_expresion()
+respetando la firma de api_sesion10.h.
+
+Evalúa expresiones con números enteros,
+suma, resta, multiplicación y división.
+
+Respeta la precedencia de los operadores,
+los paréntesis y los espacios.
+
+Utiliza funciones recursivas para analizar
+los números, productos y expresiones.
+
+Devuelve los siguientes códigos de error:
+0: Expresión válida.
+1: División entre cero.
+2: Sintaxis inválida.
+
+No permitas variables ni operadores unarios.
+
+Salida:
+Entrega únicamente código modular en C
+y su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
+
+```
 
 
 ## 3. Código Devuelto por el Modelo
-
+```text
 #include "api_sesion10.h"
 #include <ctype.h>
 #include <stddef.h>
 
 typedef struct {
-    const char *cursor;
-    int estado;
-} Contexto;
+    const char *entrada;
+    int error;
+} Analizador;
 
-static void omitir(Contexto *c) {
-    while (*c->cursor == ' ')
-        c->cursor++;
+static void omitir_espacios(Analizador *a) {
+    while (isspace((unsigned char)*a->entrada))
+        a->entrada++;
 }
 
-static long suma(Contexto *c);
+static long analizar_expresion(Analizador *a);
 
-static long factor(Contexto *c) {
-    omitir(c);
+static long analizar_numero(Analizador *a) {
+    omitir_espacios(a);
 
-    if (*c->cursor == '(') {
-        c->cursor++;
-        long resultado = suma(c);
+    if (*a->entrada == '(') {
+        a->entrada++;
 
-        if (c->estado)
+        long resultado = analizar_expresion(a);
+
+        if (a->error)
             return 0;
 
-        omitir(c);
+        omitir_espacios(a);
 
-        if (*c->cursor != ')') {
-            c->estado = 2;
+        if (*a->entrada != ')') {
+            a->error = 2;
             return 0;
         }
 
-        c->cursor++;
+        a->entrada++;
         return resultado;
     }
 
-    if (!isdigit((unsigned char)*c->cursor)) {
-        c->estado = 2;
+    if (!isdigit((unsigned char)*a->entrada)) {
+        a->error = 2;
         return 0;
     }
 
-    long resultado = 0;
+    long numero = 0;
 
-    while (isdigit((unsigned char)*c->cursor)) {
-        resultado = 10 * resultado + (*c->cursor - '0');
-        c->cursor++;
+    while (isdigit((unsigned char)*a->entrada)) {
+        numero = numero * 10 + (*a->entrada - '0');
+        a->entrada++;
+    }
+
+    return numero;
+}
+
+static long analizar_producto(Analizador *a) {
+    long resultado = analizar_numero(a);
+
+    while (!a->error) {
+        omitir_espacios(a);
+
+        char operador = *a->entrada;
+
+        if (operador != '*' && operador != '/')
+            break;
+
+        a->entrada++;
+
+        long valor = analizar_numero(a);
+
+        if (a->error)
+            return 0;
+
+        if (operador == '*') {
+            resultado *= valor;
+        } else {
+            if (valor == 0) {
+                a->error = 1;
+                return 0;
+            }
+
+            resultado /= valor;
+        }
     }
 
     return resultado;
 }
 
-static long producto(Contexto *c) {
-    long acumulado = factor(c);
+static long analizar_expresion(Analizador *a) {
+    long resultado = analizar_producto(a);
 
-    for (;;) {
-        if (c->estado)
+    while (!a->error) {
+        omitir_espacios(a);
+
+        char operador = *a->entrada;
+
+        if (operador != '+' && operador != '-')
+            break;
+
+        a->entrada++;
+
+        long valor = analizar_producto(a);
+
+        if (a->error)
             return 0;
 
-        omitir(c);
-
-        if (*c->cursor != '*' && *c->cursor != '/')
-            return acumulado;
-
-        char signo = *c->cursor++;
-        long derecho = factor(c);
-
-        if (c->estado)
-            return 0;
-
-        switch (signo) {
-            case '*':
-                acumulado = acumulado * derecho;
-                break;
-
-            case '/':
-                if (derecho == 0) {
-                    c->estado = 1;
-                    return 0;
-                }
-
-                acumulado = acumulado / derecho;
-                break;
-        }
+        if (operador == '+')
+            resultado += valor;
+        else
+            resultado -= valor;
     }
-}
 
-static long suma(Contexto *c) {
-    long acumulado = producto(c);
-
-    for (;;) {
-        if (c->estado)
-            return 0;
-
-        omitir(c);
-
-        if (*c->cursor != '+' && *c->cursor != '-')
-            return acumulado;
-
-        char signo = *c->cursor++;
-        long derecho = producto(c);
-
-        if (c->estado)
-            return 0;
-
-        switch (signo) {
-            case '+':
-                acumulado += derecho;
-                break;
-
-            case '-':
-                acumulado -= derecho;
-                break;
-        }
-    }
+    return resultado;
 }
 
 long evaluar_expresion(const char *fuente, int *error) {
-    int local = 0;
-
-    if (error == NULL)
-        error = &local;
-
-    *error = 0;
+    if (error != NULL)
+        *error = 0;
 
     if (fuente == NULL) {
-        *error = 2;
+        if (error != NULL)
+            *error = 2;
+
         return 0;
     }
 
-    Contexto c = {fuente, 0};
+    Analizador a = {fuente, 0};
 
-    long valor = suma(&c);
+    long resultado = analizar_expresion(&a);
 
-    omitir(&c);
+    omitir_espacios(&a);
 
-    if (c.estado == 0 && *c.cursor != '\0')
-        c.estado = 2;
+    if (!a.error && *a.entrada != '\0')
+        a.error = 2;
 
-    *error = c.estado;
+    if (error != NULL)
+        *error = a.error;
 
-    return c.estado == 0 ? valor : 0;
+    return a.error ? 0 : resultado;
 }
-
+```
 
 ---
 
@@ -187,8 +215,17 @@ long evaluar_expresion(const char *fuente, int *error) {
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 10 - Mini-evaluador de expresiones (Hito 1) ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] "2+3*4"                            esperado: 14           obtenido: 14           OK
+[ 2] "(2+3)*4"                          esperado: 20           obtenido: 20           OK
+[ 3] "10/0" -> error 1                  esperado: 1            obtenido: 1            OK
+[ 4] "2+" -> error 2                    esperado: 2            obtenido: 2            OK
+[ 5] "  7 "                             esperado: 7            obtenido: 7            OK
+[ 6] "5-10"                             esperado: -5           obtenido: -5           OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion10.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
