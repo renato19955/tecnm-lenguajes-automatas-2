@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Cálculo de tamaño de arreglo en memoria  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue calcular el espacio ocupado por un arreglo según su tipo de dato, validar índices negativos y evitar desbordamientos numéricos o accesos fuera de los límites establecidos.
 > 
 
 ---
@@ -27,14 +28,125 @@
 
 ### 2.2 Prompt Estructurado
 ```text
-[Pega aquí el prompt formal que redactaste para la IA]
+Contexto:
+Estoy desarrollando un sistema de cálculo
+de memoria y verificación de límites
+de arreglos en lenguaje C.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa las funciones bytes_arreglo()
+e indice_en_rango(), respetando las firmas
+del archivo api_sesion18.h.
+
+Utiliza los siguientes tamaños en bytes:
+char = 1
+short = 2
+int = 4
+float = 4
+double = 8
+puntero = 8
+
+Calcula el tamaño total multiplicando
+el ancho del tipo por el número de elementos.
+
+Rechaza tipos desconocidos, punteros NULL
+y dimensiones negativas devolviendo -1.
+
+Un arreglo de cero elementos ocupa cero bytes.
+
+Evita desbordamientos utilizando LONG_MAX.
+
+Valida que los índices sean mayores o iguales
+a cero y menores al número de elementos.
+
+Devuelve 1 si el índice es válido
+y 0 si está fuera de rango.
+
+Salida:
+Entrega únicamente código modular en C
+y su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
 ```
 
 ---
 
 ## 3. Código Devuelto por el Modelo
 ```c
-// Código devuelto por el LLM
+/* ia_sesion18_c.c
+ * Sesion 18 - Fase Cientifico
+ * Calculo de memoria y verificacion de indices.
+ */
+
+#include "api_sesion18.h"
+#include <string.h>
+#include <stddef.h>
+#include <limits.h>
+
+/* Determina el ancho del tipo de dato. */
+static int ancho_tipo(const char *tipo) {
+
+    if (tipo == NULL)
+        return -1;
+
+    if (strcmp(tipo, "char") == 0)
+        return 1;
+
+    if (strcmp(tipo, "short") == 0)
+        return 2;
+
+    if (strcmp(tipo, "int") == 0)
+        return 4;
+
+    if (strcmp(tipo, "float") == 0)
+        return 4;
+
+    if (strcmp(tipo, "double") == 0)
+        return 8;
+
+    if (strcmp(tipo, "puntero") == 0)
+        return 8;
+
+    return -1;
+}
+
+/* Calcula el espacio total de un arreglo. */
+long bytes_arreglo(const char *tipo, int elementos) {
+
+    if (tipo == NULL || elementos < 0)
+        return -1;
+
+    int ancho = ancho_tipo(tipo);
+
+    if (ancho == -1)
+        return -1;
+
+    /* Evitar desbordamiento del resultado. */
+    if ((long)elementos > LONG_MAX / ancho)
+        return -1;
+
+    return (long)elementos * ancho;
+}
+
+/* Verifica si el indice pertenece al arreglo. */
+int indice_en_rango(int indice, int elementos) {
+
+    if (elementos <= 0)
+        return 0;
+
+    if (indice < 0)
+        return 0;
+
+    if (indice >= elementos)
+        return 0;
+
+    return 1;
+}
 ```
 
 ---
@@ -44,8 +156,17 @@
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 18 - Tamano de arreglo y limites ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] int[10]                            esperado: 40           obtenido: 40           OK
+[ 2] double[3]                          esperado: 24           obtenido: 24           OK
+[ 3] int[-4]                            esperado: -1           obtenido: -1           OK
+[ 4] indice 0 de 5                      esperado: 1            obtenido: 1            OK
+[ 5] indice 5 de 5                      esperado: 0            obtenido: 0            OK
+[ 6] indice negativo                    esperado: 0            obtenido: 0            OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion18.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
