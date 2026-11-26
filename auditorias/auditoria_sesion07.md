@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Evaluador recursivo de operaciones  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue controlar las operaciones recursivas, detectar divisiones entre cero y propagar correctamente los errores de los nodos hijos hacia el nodo padre.
 > 
 
 ---
@@ -27,14 +28,115 @@
 
 ### 2.2 Prompt Estructurado
 ```text
-[Pega aquí el prompt formal que redactaste para la IA]
+Contexto:
+Estoy desarrollando un evaluador de expresiones
+aritméticas en lenguaje C utilizando GCC.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa la función evaluar(ASTNode *n, int *error)
+respetando la firma de api_sesion07.h.
+
+Evalúa recursivamente las operaciones de suma,
+resta, multiplicación, división y módulo.
+
+Devuelve error 1 cuando exista una división
+o módulo entre cero y error 2 cuando el nodo
+o la operación sean inválidos.
+
+Propaga los errores de los nodos hijos sin
+continuar evaluando los nodos padres.
+Valida los punteros NULL.
+
+Salida:
+Entrega únicamente código modular en C
+y su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
 ```
 
 ---
 
 ## 3. Código Devuelto por el Modelo
 ```c
-// Código devuelto por el LLM
+/* ia_sesion07_c.c - Fase 2: El Cientifico
+ * Evaluador recursivo de expresiones aritmeticas.
+ */
+
+#include "api_sesion07.h"
+#include <stddef.h>
+
+int evaluar(ASTNode *n, int *error) {
+    int izquierda;
+    int derecha;
+
+    if (error == NULL) {
+        return 0;
+    }
+
+    if (*error != 0) {
+        return 0;
+    }
+
+    if (n == NULL) {
+        *error = 2;
+        return 0;
+    }
+
+    if (n->tipo == NODO_NUM) {
+        return n->valor;
+    }
+
+    if (n->tipo != NODO_BINOP) {
+        *error = 2;
+        return 0;
+    }
+
+    izquierda = evaluar(n->izq, error);
+
+    if (*error != 0) {
+        return 0;
+    }
+
+    derecha = evaluar(n->der, error);
+
+    if (*error != 0) {
+        return 0;
+    }
+
+    switch (n->op) {
+        case '+':
+            return izquierda + derecha;
+
+        case '-':
+            return izquierda - derecha;
+
+        case '*':
+            return izquierda * derecha;
+
+        case '/':
+            if (derecha == 0) {
+                *error = 1;
+                return 0;
+            }
+            return izquierda / derecha;
+
+        case '%':
+            if (derecha == 0) {
+                *error = 1;
+                return 0;
+            }
+            return izquierda % derecha;
+
+        default:
+            *error = 2;
+            return 0;
+    }
+}
 ```
 
 ---
@@ -44,8 +146,17 @@
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 07 - Evaluador recursivo con deteccion de errores ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] (2+3)*4                            esperado: 20           obtenido: 20           OK
+[ 2] 7/0 -> error 1                     esperado: 1            obtenido: 1            OK
+[ 3] 7%0 -> error 1                     esperado: 1            obtenido: 1            OK
+[ 4] arbol NULL -> error 2              esperado: 2            obtenido: 2            OK
+[ 5] 10-2-3                             esperado: 5            obtenido: 5            OK
+[ 6] (8/2)+1                            esperado: 5            obtenido: 5            OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion07.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
