@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Estructura de registro de símbolos  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue calcular correctamente el tamaño de cada tipo de dato, determinar los desplazamientos de memoria y respetar la alineación de los símbolos sin provocar desbordamientos numéricos
 > 
 
 ---
@@ -27,14 +28,124 @@
 
 ### 2.2 Prompt Estructurado
 ```text
-[Pega aquí el prompt formal que redactaste para la IA]
+Contexto:
+Estoy desarrollando un sistema de cálculo
+de memoria para una tabla de símbolos en C.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa las funciones ancho_de_tipo()
+y asignar_offset(), respetando las firmas
+del archivo api_sesion12.h.
+
+Utiliza los siguientes tamaños en bytes:
+char = 1
+short = 2
+int = 4
+float = 4
+double = 8
+puntero = 8
+
+Calcula el desplazamiento de cada símbolo
+respetando la alineación correspondiente.
+
+Devuelve -1 cuando exista un tipo desconocido,
+un registro NULL o un cursor negativo.
+
+Evita desbordamientos utilizando INT_MAX.
+
+Salida:
+Entrega únicamente código modular en C
+y su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
 ```
 
 ---
 
 ## 3. Código Devuelto por el Modelo
 ```c
-// Código devuelto por el LLM
+/* ia_sesion12_c.c
+ * Sesion 12 - Fase Cientifico
+ * Calculo de memoria y alineacion de simbolos.
+ */
+
+#include "api_sesion12.h"
+#include <string.h>
+#include <stddef.h>
+#include <limits.h>
+
+typedef struct {
+    const char *nombre;
+    int bytes;
+} TipoDato;
+
+static const TipoDato tipos_validos[] = {
+    {"char", 1},
+    {"short", 2},
+    {"int", 4},
+    {"float", 4},
+    {"double", 8},
+    {"puntero", 8}
+};
+
+int ancho_de_tipo(const char *tipo) {
+    if (tipo == NULL)
+        return -1;
+
+    size_t cantidad = sizeof(tipos_validos) /
+                      sizeof(tipos_validos[0]);
+
+    for (size_t i = 0; i < cantidad; i++) {
+        if (strcmp(tipo, tipos_validos[i].nombre) == 0)
+            return tipos_validos[i].bytes;
+    }
+
+    return -1;
+}
+
+static int alinear_cursor(int cursor, int alineacion) {
+    if (cursor < 0 || alineacion <= 0)
+        return -1;
+
+    int residuo = cursor % alineacion;
+
+    if (residuo == 0)
+        return cursor;
+
+    int ajuste = alineacion - residuo;
+
+    if (cursor > INT_MAX - ajuste)
+        return -1;
+
+    return cursor + ajuste;
+}
+
+int asignar_offset(Simbolo *simbolo, int cursor) {
+    if (simbolo == NULL || cursor < 0)
+        return -1;
+
+    int ancho = ancho_de_tipo(simbolo->tipo);
+
+    if (ancho == -1)
+        return -1;
+
+    int posicion = alinear_cursor(cursor, ancho);
+
+    if (posicion == -1)
+        return -1;
+
+    if (posicion > INT_MAX - ancho)
+        return -1;
+
+    simbolo->offset = posicion;
+
+    return posicion + ancho;
+}
 ```
 
 ---
@@ -44,8 +155,17 @@
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 12 - Registro de simbolo y offsets alineados ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] ancho_de_tipo("int")               esperado: 4            obtenido: 4            OK
+[ 2] ancho_de_tipo("double")            esperado: 8            obtenido: 8            OK
+[ 3] int en cursor 0                    esperado: 4            obtenido: 4            OK
+[ 4] char e int: offset de b            esperado: 4            obtenido: 4            OK
+[ 5] double desde cursor 4              esperado: 8            obtenido: 8            OK
+[ 6] registro NULL                      esperado: -1           obtenido: -1           OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion12.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
