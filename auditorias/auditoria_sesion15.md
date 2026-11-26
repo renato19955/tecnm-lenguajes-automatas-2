@@ -11,6 +11,7 @@
 ## 1. Fase 1: El Artesano (Dificultad Manual)
 *Reto:* Operaciones Push y Pop de ámbito  
 *Describe qué problema o restricción de memoria/sintaxis identificaste al codificar a mano:*
+La principal dificultad fue administrar los ámbitos anidados mediante punteros, liberar correctamente la memoria al cerrar un bloque y recuperar el ámbito padre sin eliminar el ámbito raíz.
 > 
 
 ---
@@ -27,14 +28,89 @@
 
 ### 2.2 Prompt Estructurado
 ```text
-[Pega aquí el prompt formal que redactaste para la IA]
+Contexto:
+Estoy desarrollando un sistema de administración
+de ámbitos anidados en lenguaje C.
+
+Rol:
+Actúa como ingeniero de software especializado
+en sistemas y compiladores.
+
+Especificación:
+Implementa las funciones push_ambito()
+y pop_ambito(), respetando las firmas
+del archivo api_sesion15.h.
+
+Utiliza malloc() para crear nuevos ámbitos
+y enlázalos con su ámbito padre.
+
+Utiliza free() para liberar la memoria
+cuando se cierre un bloque.
+
+Valida los punteros NULL y evita liberar
+el ámbito raíz.
+
+La función push_ambito() debe devolver
+el nuevo ámbito o NULL ante un error.
+
+La función pop_ambito() debe devolver
+el ámbito padre o NULL si recibe la raíz
+o un puntero inválido por ser NULL.
+
+Salida:
+Entrega únicamente código modular en C
+y su análisis de complejidad.
+No incluyas la función main().
+El código debe compilar con
+-Wall -Wextra -Werror.
 ```
 
 ---
 
 ## 3. Código Devuelto por el Modelo
 ```c
-// Código devuelto por el LLM
+/* ia_sesion15_c.c
+ * Sesion 15 - Fase Cientifico
+ * Administracion de bloques anidados.
+ */
+
+#include "api_sesion15.h"
+#include <stdlib.h>
+#include <stddef.h>
+
+/* Crea un nuevo ambito enlazado al padre. */
+Ambito *push_ambito(Ambito *actual, const char *nombre) {
+
+    if (actual == NULL || nombre == NULL)
+        return NULL;
+
+    Ambito *nuevo = malloc(sizeof(*nuevo));
+
+    if (nuevo == NULL)
+        return NULL;
+
+    nuevo->nombre = nombre;
+    nuevo->padre = actual;
+
+    return nuevo;
+}
+
+/* Cierra el ambito actual y recupera su padre. */
+Ambito *pop_ambito(Ambito *actual) {
+
+    if (actual == NULL)
+        return NULL;
+
+    /* La raiz no se libera. */
+    if (actual->padre == NULL)
+        return NULL;
+
+    Ambito *padre = actual->padre;
+
+    free(actual);
+
+    return padre;
+}
 ```
 
 ---
@@ -44,8 +120,17 @@
 
 ### Salida del harness
 ```text
-Pega aquí la salida de la celda del harness. Debe terminar con:
-RESULTADO: n/n pruebas superadas
+=== AUDITORIA SESION 15 - Push y pop de ambitos ===
+Caso                               esperado:              obtenido:              resultado
+[ 1] nombre del ambito nuevo            esperado: if           obtenido: if           OK
+[ 2] profundidad con dos push           esperado: 3            obtenido: 3            OK
+[ 3] pop devuelve el padre              esperado: 1            obtenido: 1            OK
+[ 4] pop sobre la raiz                  esperado: 1            obtenido: 1            OK
+[ 5] push con padre NULL                esperado: 1            obtenido: 1            OK
+[ 6] profundidad tras pop               esperado: 2            obtenido: 2            OK
+
+RESULTADO: 6/6 pruebas superadas
+TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion15.md
 ```
 
 * [ ] Caso base y límites superados sin *Crash*.
