@@ -98,9 +98,6 @@ Caso                               esperado:              obtenido:             
 RESULTADO: 6/6 pruebas superadas
 TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion01.md
 
-RESULTADO: 6/6 pruebas superadas
-TODO EN VERDE. Documenta tu auditoria en auditorias/auditoria_sesion01.md
-
 Caso base y límites superados sin Crash.
 [x] No se identificaron accesos fuera de límites ni Memory Leaks mediante la revisión del código.
 [x] La complejidad teórica coincide con la implementada.
