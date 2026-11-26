@@ -26,16 +26,159 @@
 | **Output (O)** | Solo código modular y análisis de complejidad |
 
 ### 2.2 Prompt Estructurado
-```text
-[Pega aquí el prompt formal que redactaste para la IA]
-```
+Actúa como un especialista en compiladores. Desarrolla
+el mini-evaluador de la sesión 10 respetando las firmas
+de api_sesion10.h. Evalúa correctamente las expresiones,
+controla los errores y respeta la precedencia de las
+operaciones. Genera código compatible con el harness.
 
----
 
 ## 3. Código Devuelto por el Modelo
-```c
-// Código devuelto por el LLM
-```
+
+#include "api_sesion10.h"
+#include <ctype.h>
+#include <stddef.h>
+
+typedef struct {
+    const char *cursor;
+    int estado;
+} Contexto;
+
+static void omitir(Contexto *c) {
+    while (*c->cursor == ' ')
+        c->cursor++;
+}
+
+static long suma(Contexto *c);
+
+static long factor(Contexto *c) {
+    omitir(c);
+
+    if (*c->cursor == '(') {
+        c->cursor++;
+        long resultado = suma(c);
+
+        if (c->estado)
+            return 0;
+
+        omitir(c);
+
+        if (*c->cursor != ')') {
+            c->estado = 2;
+            return 0;
+        }
+
+        c->cursor++;
+        return resultado;
+    }
+
+    if (!isdigit((unsigned char)*c->cursor)) {
+        c->estado = 2;
+        return 0;
+    }
+
+    long resultado = 0;
+
+    while (isdigit((unsigned char)*c->cursor)) {
+        resultado = 10 * resultado + (*c->cursor - '0');
+        c->cursor++;
+    }
+
+    return resultado;
+}
+
+static long producto(Contexto *c) {
+    long acumulado = factor(c);
+
+    for (;;) {
+        if (c->estado)
+            return 0;
+
+        omitir(c);
+
+        if (*c->cursor != '*' && *c->cursor != '/')
+            return acumulado;
+
+        char signo = *c->cursor++;
+        long derecho = factor(c);
+
+        if (c->estado)
+            return 0;
+
+        switch (signo) {
+            case '*':
+                acumulado = acumulado * derecho;
+                break;
+
+            case '/':
+                if (derecho == 0) {
+                    c->estado = 1;
+                    return 0;
+                }
+
+                acumulado = acumulado / derecho;
+                break;
+        }
+    }
+}
+
+static long suma(Contexto *c) {
+    long acumulado = producto(c);
+
+    for (;;) {
+        if (c->estado)
+            return 0;
+
+        omitir(c);
+
+        if (*c->cursor != '+' && *c->cursor != '-')
+            return acumulado;
+
+        char signo = *c->cursor++;
+        long derecho = producto(c);
+
+        if (c->estado)
+            return 0;
+
+        switch (signo) {
+            case '+':
+                acumulado += derecho;
+                break;
+
+            case '-':
+                acumulado -= derecho;
+                break;
+        }
+    }
+}
+
+long evaluar_expresion(const char *fuente, int *error) {
+    int local = 0;
+
+    if (error == NULL)
+        error = &local;
+
+    *error = 0;
+
+    if (fuente == NULL) {
+        *error = 2;
+        return 0;
+    }
+
+    Contexto c = {fuente, 0};
+
+    long valor = suma(&c);
+
+    omitir(&c);
+
+    if (c.estado == 0 && *c.cursor != '\0')
+        c.estado = 2;
+
+    *error = c.estado;
+
+    return c.estado == 0 ? valor : 0;
+}
+
 
 ---
 
